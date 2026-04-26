@@ -3,7 +3,7 @@ local p = import 'pkg/main.libsonnet';
 p.pkg({
   source: 'https://github.com/marcbran/jsonnet-plugin-http',
   repo: 'https://github.com/marcbran/jsonnet.git',
-  branch: 'plugin-http',
+  branch: 'plugin/http',
   path: 'plugin/http',
   target: 'http',
 }, |||
