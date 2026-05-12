@@ -63,3 +63,17 @@ func TestRequestPassesQueryAndHeaders(t *testing.T) {
 		the_result_has_field("query", "up").and().
 		the_result_has_field("header", "hello")
 }
+
+func TestPostRequestEchoesBody(t *testing.T) {
+	given, when, then := scenario(t)
+
+	given.
+		a_server_echoing_post_body()
+
+	when.
+		a_jsonnet_post_request_is_evaluated("/query", `{key: "value"}`)
+
+	then.
+		the_eval_has_no_error().and().
+		the_result_has_field("key", "value")
+}

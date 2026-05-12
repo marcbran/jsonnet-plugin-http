@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,7 @@ type RequestInput struct {
 	Path    string
 	Headers map[string]string
 	Query   map[string]string
+	Body    any
 }
 
 func Request(cfg *Config) jsonnet.NativeFunction {
@@ -51,8 +53,12 @@ func parseRequestInput(input []any) (RequestInput, error) {
 	if !ok || method == "" {
 		return RequestInput{}, fmt.Errorf("method must be a non-empty string")
 	}
-	if method != http.MethodGet {
-		return RequestInput{}, fmt.Errorf("method must be GET")
+	if method != http.MethodGet && method != http.MethodPost {
+		return RequestInput{}, fmt.Errorf("method must be GET or POST")
+	}
+	readonly, _ := raw["readonly"].(bool)
+	if method == http.MethodPost && !readonly {
+		return RequestInput{}, fmt.Errorf("POST requires readonly: true")
 	}
 	path, ok := raw["path"].(string)
 	if !ok || path == "" {
@@ -96,6 +102,15 @@ func parseRequestInput(input []any) (RequestInput, error) {
 			ri.Query[k] = s
 		}
 	}
+	if raw["body"] != nil {
+		if method != http.MethodPost {
+			return RequestInput{}, fmt.Errorf("body is only allowed with POST")
+		}
+		ri.Body = raw["body"]
+	}
+	if method == http.MethodPost && ri.Body == nil {
+		return RequestInput{}, fmt.Errorf("POST requires a body")
+	}
 	return ri, nil
 }
 
@@ -131,9 +146,24 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) 
 		q.Set(k, v)
 	}
 	u.RawQuery = q.Encode()
-	req, err := http.NewRequestWithContext(ctx, ri.Method, u.String(), nil)
+	var bodyReader *bytes.Reader
+	if ri.Body != nil {
+		bodyBytes, err := json.Marshal(ri.Body)
+		if err != nil {
+			return clientFailureStatus(400, err.Error()), nil
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
+	}
+	var reqBody io.Reader
+	if bodyReader != nil {
+		reqBody = bodyReader
+	}
+	req, err := http.NewRequestWithContext(ctx, ri.Method, u.String(), reqBody)
 	if err != nil {
 		return clientFailureStatus(400, err.Error()), nil
+	}
+	if ri.Body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 	for k, v := range cfg.Headers {
 		req.Header.Set(k, v)

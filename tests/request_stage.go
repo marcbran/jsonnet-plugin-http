@@ -4,6 +4,7 @@ package tests
 
 import (
 	"fmt"
+	"io"
 	stdhttp "net/http"
 	"net/http/httptest"
 	"strings"
@@ -83,6 +84,38 @@ func (s *Stage) a_server_echoing_query_and_header() *Stage {
 	}))
 	s.t.(*testing.T).Cleanup(s.srv.Close)
 	s.plugin = pluginhttp.Plugin("http", pluginhttp.WithBaseURL(s.srv.URL), pluginhttp.WithHTTPClient(s.srv.Client()))
+	return s
+}
+
+func (s *Stage) a_server_echoing_post_body() *Stage {
+	s.srv = httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		if r.Method != stdhttp.MethodPost {
+			w.WriteHeader(stdhttp.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		body, err := io.ReadAll(r.Body)
+		require.NoError(s.t, err)
+		_, err = w.Write(body)
+		require.NoError(s.t, err)
+	}))
+	s.t.(*testing.T).Cleanup(s.srv.Close)
+	s.plugin = pluginhttp.Plugin("http", pluginhttp.WithBaseURL(s.srv.URL), pluginhttp.WithHTTPClient(s.srv.Client()))
+	return s
+}
+
+func (s *Stage) a_jsonnet_post_request_is_evaluated(path string, bodyJSON string) *Stage {
+	snippet := fmt.Sprintf(
+		`std.native('invoke:http')('request', [{method: 'POST', path: '%s', readonly: true, body: %s}])`,
+		path,
+		bodyJSON,
+	)
+	s.err = jpoet.Eval(
+		jpoet.WithPlugin(s.plugin),
+		jpoet.SnippetInput("test.jsonnet", snippet),
+		jpoet.ValueOutput(&s.out),
+		jpoet.Serialize(false),
+	)
 	return s
 }
 
