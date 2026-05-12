@@ -101,12 +101,55 @@ func TestParseRequestInput(t *testing.T) {
 			wantError: "method must be a non-empty string",
 		},
 		{
-			name: "method not get",
+			name: "post with readonly and body",
+			input: []any{map[string]any{
+				"method":   "POST",
+				"path":     "/api/ds/query",
+				"readonly": true,
+				"body":     map[string]any{"queries": []any{}},
+			}},
+			want: RequestInput{
+				Method:  "POST",
+				Path:    "/api/ds/query",
+				Headers: map[string]string{},
+				Query:   map[string]string{},
+				Body:    map[string]any{"queries": []any{}},
+			},
+		},
+		{
+			name: "post without readonly rejected",
 			input: []any{map[string]any{
 				"method": "POST",
 				"path":   "/",
+				"body":   map[string]any{"x": 1},
 			}},
-			wantError: "method must be GET",
+			wantError: "POST requires readonly: true",
+		},
+		{
+			name: "post without body rejected",
+			input: []any{map[string]any{
+				"method":   "POST",
+				"path":     "/",
+				"readonly": true,
+			}},
+			wantError: "POST requires a body",
+		},
+		{
+			name: "get with body rejected",
+			input: []any{map[string]any{
+				"method": "GET",
+				"path":   "/",
+				"body":   map[string]any{"x": 1},
+			}},
+			wantError: "body is only allowed with POST",
+		},
+		{
+			name: "unsupported method",
+			input: []any{map[string]any{
+				"method": "DELETE",
+				"path":   "/",
+			}},
+			wantError: "method must be GET or POST",
 		},
 		{
 			name: "missing path",
