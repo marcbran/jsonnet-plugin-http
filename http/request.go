@@ -16,10 +16,12 @@ import (
 )
 
 type RequestInput struct {
+	BaseURL string
 	Method  string
 	Path    string
 	Headers map[string]string
 	Query   map[string]string
+	Context map[string]string
 	Body    any
 }
 
@@ -69,6 +71,14 @@ func parseRequestInput(input []any) (RequestInput, error) {
 		Path:    path,
 		Headers: map[string]string{},
 		Query:   map[string]string{},
+		Context: map[string]string{},
+	}
+	if raw["baseURL"] != nil {
+		s, ok := raw["baseURL"].(string)
+		if !ok || s == "" {
+			return RequestInput{}, fmt.Errorf("baseURL must be a non-empty string")
+		}
+		ri.BaseURL = s
 	}
 	if raw["headers"] != nil {
 		hm, ok := raw["headers"].(map[string]any)
@@ -102,6 +112,22 @@ func parseRequestInput(input []any) (RequestInput, error) {
 			ri.Query[k] = s
 		}
 	}
+	if raw["context"] != nil {
+		cm, ok := raw["context"].(map[string]any)
+		if !ok {
+			return RequestInput{}, fmt.Errorf("context must be an object")
+		}
+		for k, v := range cm {
+			if v == nil {
+				continue
+			}
+			s, err := stringFromAny(v)
+			if err != nil {
+				return RequestInput{}, fmt.Errorf("context %q: %w", k, err)
+			}
+			ri.Context[k] = s
+		}
+	}
 	if raw["body"] != nil {
 		if method != http.MethodPost {
 			return RequestInput{}, fmt.Errorf("body is only allowed with POST")
@@ -128,10 +154,14 @@ func stringFromAny(v any) (string, error) {
 }
 
 func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) {
-	if cfg.BaseURL == "" {
+	baseURL := ri.BaseURL
+	if baseURL == "" {
+		baseURL = cfg.BaseURL
+	}
+	if baseURL == "" {
 		return clientFailureStatus(400, "base url not configured"), nil
 	}
-	baseStr := strings.TrimRight(cfg.BaseURL, "/")
+	baseStr := strings.TrimRight(baseURL, "/")
 	pathStr := ri.Path
 	if !strings.HasPrefix(pathStr, "/") {
 		pathStr = "/" + pathStr

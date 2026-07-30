@@ -7,6 +7,45 @@ import (
 	"github.com/marcbran/jpoet/pkg/jpoet"
 )
 
+func BaseURLByRequest(
+	baseURLFor func(RequestInput) (string, error),
+) jpoet.Middleware {
+	return jpoet.HookMiddleware(func(next jpoet.Invoker, funcName string, args []any) (any, error) {
+		if funcName != "request" || baseURLFor == nil {
+			return next.Invoke(funcName, args)
+		}
+		ri, err := parseRequestInput(args)
+		if err != nil {
+			return next.Invoke(funcName, args)
+		}
+		baseURL, err := baseURLFor(ri)
+		if err != nil {
+			return nil, fmt.Errorf("base url by request: %w", err)
+		}
+		if baseURL == "" {
+			return next.Invoke(funcName, args)
+		}
+		return next.Invoke(funcName, injectBaseURL(args, baseURL))
+	})
+}
+
+func injectBaseURL(args []any, baseURL string) []any {
+	if len(args) == 0 {
+		return args
+	}
+	input, ok := args[0].(map[string]any)
+	if !ok {
+		return args
+	}
+	mergedInput := make(map[string]any, len(input)+1)
+	maps.Copy(mergedInput, input)
+	mergedInput["baseURL"] = baseURL
+	mergedArgs := make([]any, len(args))
+	copy(mergedArgs, args)
+	mergedArgs[0] = mergedInput
+	return mergedArgs
+}
+
 func HeadersByRequest(
 	headersFor func(RequestInput) (map[string]string, error),
 	override bool,

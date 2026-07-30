@@ -24,7 +24,84 @@ func TestParseRequestInput(t *testing.T) {
 				Path:    "/api/v1/query",
 				Headers: map[string]string{},
 				Query:   map[string]string{},
+				Context: map[string]string{},
 			},
+		},
+		{
+			name: "with context and baseURL override",
+			input: []any{map[string]any{
+				"method": "GET",
+				"path":   "/x",
+				"context": map[string]any{
+					"region": "eu-west-1",
+					"tenant": "acme",
+				},
+				"baseURL": "https://eu-west-1.example.com",
+			}},
+			want: RequestInput{
+				Method:  "GET",
+				Path:    "/x",
+				Headers: map[string]string{},
+				Query:   map[string]string{},
+				Context: map[string]string{
+					"region": "eu-west-1",
+					"tenant": "acme",
+				},
+				BaseURL: "https://eu-west-1.example.com",
+			},
+		},
+		{
+			name: "skip nil context value",
+			input: []any{map[string]any{
+				"method":  "GET",
+				"path":    "/y",
+				"context": map[string]any{"a": nil, "b": "c"},
+			}},
+			want: RequestInput{
+				Method:  "GET",
+				Path:    "/y",
+				Headers: map[string]string{},
+				Query:   map[string]string{},
+				Context: map[string]string{"b": "c"},
+			},
+		},
+		{
+			name: "context not object",
+			input: []any{map[string]any{
+				"method":  "GET",
+				"path":    "/",
+				"context": "bad",
+			}},
+			wantError: "context must be an object",
+		},
+		{
+			name: "bad context value",
+			input: []any{map[string]any{
+				"method": "GET",
+				"path":   "/",
+				"context": map[string]any{
+					"a": map[string]any{},
+				},
+			}},
+			wantError: `context "a"`,
+		},
+		{
+			name: "empty baseURL rejected",
+			input: []any{map[string]any{
+				"method":  "GET",
+				"path":    "/",
+				"baseURL": "",
+			}},
+			wantError: "baseURL must be a non-empty string",
+		},
+		{
+			name: "non-string baseURL rejected",
+			input: []any{map[string]any{
+				"method":  "GET",
+				"path":    "/",
+				"baseURL": 1,
+			}},
+			wantError: "baseURL must be a non-empty string",
 		},
 		{
 			name: "with query and headers",
@@ -48,6 +125,7 @@ func TestParseRequestInput(t *testing.T) {
 					"q": "up",
 					"n": "1",
 				},
+				Context: map[string]string{},
 			},
 		},
 		{
@@ -62,6 +140,7 @@ func TestParseRequestInput(t *testing.T) {
 				Path:    "/y",
 				Headers: map[string]string{},
 				Query:   map[string]string{"b": "c"},
+				Context: map[string]string{},
 			},
 		},
 		{
@@ -80,7 +159,8 @@ func TestParseRequestInput(t *testing.T) {
 				Headers: map[string]string{
 					"X-Set": "v",
 				},
-				Query: map[string]string{},
+				Query:   map[string]string{},
+				Context: map[string]string{},
 			},
 		},
 		{
@@ -113,6 +193,7 @@ func TestParseRequestInput(t *testing.T) {
 				Path:    "/api/ds/query",
 				Headers: map[string]string{},
 				Query:   map[string]string{},
+				Context: map[string]string{},
 				Body:    map[string]any{"queries": []any{}},
 			},
 		},
