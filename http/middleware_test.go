@@ -6,6 +6,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestInjectBaseURL(t *testing.T) {
+	tests := []struct {
+		name             string
+		jsonnetInput     map[string]any
+		injectedBaseURL  string
+		wantOriginalBase any
+	}{
+		{
+			name: "sets baseURL when none is present",
+			jsonnetInput: map[string]any{
+				"method": "GET",
+				"path":   "/x",
+			},
+			injectedBaseURL:  "https://eu-west-1.example.com",
+			wantOriginalBase: nil,
+		},
+		{
+			name: "overrides an existing baseURL",
+			jsonnetInput: map[string]any{
+				"method":  "GET",
+				"path":    "/x",
+				"baseURL": "https://static.example.com",
+			},
+			injectedBaseURL:  "https://eu-west-1.example.com",
+			wantOriginalBase: "https://static.example.com",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := []any{tt.jsonnetInput}
+
+			got := injectBaseURL(args, tt.injectedBaseURL)
+
+			require.Equal(t, tt.injectedBaseURL, got[0].(map[string]any)["baseURL"])
+			require.Equal(t, tt.wantOriginalBase, args[0].(map[string]any)["baseURL"])
+		})
+	}
+}
+
 func TestInjectHeaders(t *testing.T) {
 	tests := []struct {
 		name            string
