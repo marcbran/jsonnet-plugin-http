@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.2.0...v0.3.0) (2026-07-30)
+
+
+### Features
+
+* support baseUrl and context by request ([#29](https://github.com/marcbran/jsonnet-plugin-http/issues/29)) ([9363c34](https://github.com/marcbran/jsonnet-plugin-http/commit/9363c3463f1d70cb2346ce7fda93ca2bd48adb63))
+
 ## [0.2.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.1.0...v0.2.0) (2026-05-12)
 
 
