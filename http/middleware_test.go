@@ -45,6 +45,55 @@ func TestInjectBaseURL(t *testing.T) {
 	}
 }
 
+func TestInjectBody(t *testing.T) {
+	tests := []struct {
+		name             string
+		jsonnetInput     map[string]any
+		injectedBody     any
+		wantOriginalBody any
+	}{
+		{
+			name: "sets body when none is present",
+			jsonnetInput: map[string]any{
+				"method":   "POST",
+				"path":     "/x",
+				"readonly": true,
+			},
+			injectedBody: map[string]any{
+				"name": "dynamic",
+			},
+			wantOriginalBody: nil,
+		},
+		{
+			name: "overrides an existing body",
+			jsonnetInput: map[string]any{
+				"method":   "POST",
+				"path":     "/x",
+				"readonly": true,
+				"body": map[string]any{
+					"name": "jsonnet",
+				},
+			},
+			injectedBody: map[string]any{
+				"name": "dynamic",
+			},
+			wantOriginalBody: map[string]any{
+				"name": "jsonnet",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := []any{tt.jsonnetInput}
+
+			got := injectBody(args, tt.injectedBody)
+
+			require.Equal(t, tt.injectedBody, got[0].(map[string]any)["body"])
+			require.Equal(t, tt.wantOriginalBody, args[0].(map[string]any)["body"])
+		})
+	}
+}
+
 func TestInjectHeaders(t *testing.T) {
 	tests := []struct {
 		name            string
