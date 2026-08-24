@@ -159,7 +159,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) 
 		baseURL = cfg.BaseURL
 	}
 	if baseURL == "" {
-		return clientFailureStatus(400, "base url not configured"), nil
+		return clientFailureEnvelope(400, "base url not configured"), nil
 	}
 	baseStr := strings.TrimRight(baseURL, "/")
 	pathStr := ri.Path
@@ -169,7 +169,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) 
 	fullRaw := baseStr + pathStr
 	u, err := url.Parse(fullRaw)
 	if err != nil {
-		return clientFailureStatus(400, "invalid url"), nil
+		return clientFailureEnvelope(400, "invalid url"), nil
 	}
 	q := u.Query()
 	for k, v := range ri.Query {
@@ -180,7 +180,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) 
 	if ri.Body != nil {
 		bodyBytes, err := json.Marshal(ri.Body)
 		if err != nil {
-			return clientFailureStatus(400, err.Error()), nil
+			return clientFailureEnvelope(400, err.Error()), nil
 		}
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
@@ -190,7 +190,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) 
 	}
 	req, err := http.NewRequestWithContext(ctx, ri.Method, u.String(), reqBody)
 	if err != nil {
-		return clientFailureStatus(400, err.Error()), nil
+		return clientFailureEnvelope(400, err.Error()), nil
 	}
 	if ri.Body != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -203,32 +203,55 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) 
 	}
 	resp, err := cfg.Client.Do(req)
 	if err != nil {
-		return clientFailureStatus(500, err.Error()), nil
+		return clientFailureEnvelope(500, err.Error()), nil
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return clientFailureStatus(500, err.Error()), nil
+		return clientFailureEnvelope(500, err.Error()), nil
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		return clientFailureStatus(500, err.Error()), nil
+		return clientFailureEnvelope(500, err.Error()), nil
 	}
+	headers := headersToMap(resp.Header)
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		msg := strings.TrimSpace(string(body))
 		if msg == "" {
 			msg = resp.Status
 		}
-		return clientFailureStatus(int32(resp.StatusCode), msg), nil
+		return envelope(resp.StatusCode, headers, clientFailureStatus(int32(resp.StatusCode), msg)), nil
 	}
 	if len(body) == 0 {
-		return map[string]any{}, nil
+		return envelope(resp.StatusCode, headers, map[string]any{}), nil
 	}
 	var out any
 	err = json.Unmarshal(body, &out)
 	if err != nil {
-		return clientFailureStatus(500, err.Error()), nil
+		return envelope(resp.StatusCode, headers, clientFailureStatus(500, err.Error())), nil
 	}
-	return out, nil
+	return envelope(resp.StatusCode, headers, out), nil
+}
+
+func headersToMap(h http.Header) map[string]any {
+	m := make(map[string]any, len(h))
+	for k, v := range h {
+		if len(v) > 0 {
+			m[k] = v[0]
+		}
+	}
+	return m
+}
+
+func envelope(status int, headers map[string]any, body any) map[string]any {
+	return map[string]any{
+		"status":  float64(status),
+		"headers": headers,
+		"body":    body,
+	}
+}
+
+func clientFailureEnvelope(code int32, msg string) map[string]any {
+	return envelope(int(code), map[string]any{}, clientFailureStatus(code, msg))
 }
 
 func clientFailureStatus(code int32, msg string) map[string]any {

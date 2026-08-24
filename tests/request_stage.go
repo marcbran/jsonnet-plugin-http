@@ -152,34 +152,52 @@ func (s *Stage) the_eval_has_no_error() *Stage {
 	return s
 }
 
-func (s *Stage) the_result_is_an_empty_map() *Stage {
-	require.Len(s.t, s.out, 0)
+func (s *Stage) body() map[string]any {
+	body, ok := s.out["body"].(map[string]any)
+	require.True(s.t, ok, "result has no body object: %v", s.out)
+	return body
+}
+
+func (s *Stage) the_body_is_an_empty_map() *Stage {
+	require.Len(s.t, s.body(), 0)
+	return s
+}
+
+func (s *Stage) the_result_has_status(expected float64) *Stage {
+	require.Equal(s.t, expected, s.out["status"])
+	return s
+}
+
+func (s *Stage) the_result_has_header(name string, expected string) *Stage {
+	headers, ok := s.out["headers"].(map[string]any)
+	require.True(s.t, ok, "result has no headers object: %v", s.out)
+	require.Equal(s.t, expected, headers[name])
 	return s
 }
 
 func (s *Stage) the_result_has_kind(expected string) *Stage {
-	require.Equal(s.t, expected, s.out["kind"])
+	require.Equal(s.t, expected, s.body()["kind"])
 	return s
 }
 
 func (s *Stage) the_result_has_code(expected float64) *Stage {
-	require.Equal(s.t, expected, s.out["code"])
+	require.Equal(s.t, expected, s.body()["code"])
 	return s
 }
 
 func (s *Stage) the_result_has_message(expected string) *Stage {
-	require.Equal(s.t, expected, s.out["message"])
+	require.Equal(s.t, expected, s.body()["message"])
 	return s
 }
 
 func (s *Stage) the_result_message_contains(expected string) *Stage {
-	msg, ok := s.out["message"].(string)
+	msg, ok := s.body()["message"].(string)
 	require.True(s.t, ok)
 	require.True(s.t, strings.Contains(msg, expected))
 	return s
 }
 
 func (s *Stage) the_result_has_field(field string, expected any) *Stage {
-	require.Equal(s.t, expected, s.out[field])
+	require.Equal(s.t, expected, s.body()[field])
 	return s
 }
