@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.3.0...v0.4.0) (2026-08-24)
+
+
+### Features
+
+* response envelope ([#35](https://github.com/marcbran/jsonnet-plugin-http/issues/35)) ([277728c](https://github.com/marcbran/jsonnet-plugin-http/commit/277728c6e39081a3032aecf138cc3e6364504495))
+
 ## [0.3.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.2.0...v0.3.0) (2026-07-30)
 
 
