@@ -14,7 +14,8 @@ func TestRequestEmptyBody(t *testing.T) {
 		a_jsonnet_request_is_evaluated("GET", "/empty")
 
 	then.the_eval_has_no_error().and().
-		the_result_is_an_empty_map()
+		the_result_has_status(200).and().
+		the_body_is_an_empty_map()
 }
 
 func TestRequestHTTPError(t *testing.T) {
@@ -28,6 +29,7 @@ func TestRequestHTTPError(t *testing.T) {
 
 	then.
 		the_eval_has_no_error().and().
+		the_result_has_status(404).and().
 		the_result_has_kind("Status").and().
 		the_result_has_code(404).and().
 		the_result_has_message("gone")
@@ -60,6 +62,8 @@ func TestRequestPassesQueryAndHeaders(t *testing.T) {
 
 	then.
 		the_eval_has_no_error().and().
+		the_result_has_status(200).and().
+		the_result_has_header("Content-Type", "application/json").and().
 		the_result_has_field("query", "up").and().
 		the_result_has_field("header", "hello")
 }
