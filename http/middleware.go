@@ -46,6 +46,45 @@ func injectBaseURL(args []any, baseURL string) []any {
 	return mergedArgs
 }
 
+func BodyByRequest(
+	bodyFor func(RequestInput) (any, error),
+) jpoet.Middleware {
+	return jpoet.HookMiddleware(func(next jpoet.Invoker, funcName string, args []any) (any, error) {
+		if funcName != "request" || bodyFor == nil {
+			return next.Invoke(funcName, args)
+		}
+		ri, err := parseRequestInput(args)
+		if err != nil {
+			return next.Invoke(funcName, args)
+		}
+		body, err := bodyFor(ri)
+		if err != nil {
+			return nil, fmt.Errorf("body by request: %w", err)
+		}
+		if body == nil {
+			return next.Invoke(funcName, args)
+		}
+		return next.Invoke(funcName, injectBody(args, body))
+	})
+}
+
+func injectBody(args []any, body any) []any {
+	if len(args) == 0 {
+		return args
+	}
+	input, ok := args[0].(map[string]any)
+	if !ok {
+		return args
+	}
+	mergedInput := make(map[string]any, len(input)+1)
+	maps.Copy(mergedInput, input)
+	mergedInput["body"] = body
+	mergedArgs := make([]any, len(args))
+	copy(mergedArgs, args)
+	mergedArgs[0] = mergedInput
+	return mergedArgs
+}
+
 func HeadersByRequest(
 	headersFor func(RequestInput) (map[string]string, error),
 	override bool,
