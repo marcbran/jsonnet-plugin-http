@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.4.0...v0.5.0) (2026-08-28)
+
+
+### Features
+
+* body middleware ([#37](https://github.com/marcbran/jsonnet-plugin-http/issues/37)) ([024825c](https://github.com/marcbran/jsonnet-plugin-http/commit/024825c81fbd9e667eb4719de4aa98e8e7e03a41))
+
 ## [0.4.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.3.0...v0.4.0) (2026-08-24)
 
 
