@@ -10,7 +10,19 @@ import (
 func BaseURLByRequest(
 	baseURLFor func(RequestInput) (string, error),
 ) jpoet.Middleware {
-	return jpoet.HookMiddleware(func(next jpoet.Invoker, funcName string, args []any) (any, error) {
+	return jpoet.HookMiddleware(baseURLByRequestHook(baseURLFor))
+}
+
+func WithBaseURLByRequest(
+	baseURLFor func(RequestInput) (string, error),
+) Option {
+	return WithHook(baseURLByRequestHook(baseURLFor))
+}
+
+func baseURLByRequestHook(
+	baseURLFor func(RequestInput) (string, error),
+) jpoet.InvokeHook {
+	return func(next jpoet.Invoker, funcName string, args []any) (any, error) {
 		if funcName != "request" || baseURLFor == nil {
 			return next.Invoke(funcName, args)
 		}
@@ -26,7 +38,7 @@ func BaseURLByRequest(
 			return next.Invoke(funcName, args)
 		}
 		return next.Invoke(funcName, injectBaseURL(args, baseURL))
-	})
+	}
 }
 
 func injectBaseURL(args []any, baseURL string) []any {
@@ -49,7 +61,19 @@ func injectBaseURL(args []any, baseURL string) []any {
 func BodyByRequest(
 	bodyFor func(RequestInput) (any, error),
 ) jpoet.Middleware {
-	return jpoet.HookMiddleware(func(next jpoet.Invoker, funcName string, args []any) (any, error) {
+	return jpoet.HookMiddleware(bodyByRequestHook(bodyFor))
+}
+
+func WithBodyByRequest(
+	bodyFor func(RequestInput) (any, error),
+) Option {
+	return WithHook(bodyByRequestHook(bodyFor))
+}
+
+func bodyByRequestHook(
+	bodyFor func(RequestInput) (any, error),
+) jpoet.InvokeHook {
+	return func(next jpoet.Invoker, funcName string, args []any) (any, error) {
 		if funcName != "request" || bodyFor == nil {
 			return next.Invoke(funcName, args)
 		}
@@ -65,7 +89,7 @@ func BodyByRequest(
 			return next.Invoke(funcName, args)
 		}
 		return next.Invoke(funcName, injectBody(args, body))
-	})
+	}
 }
 
 func injectBody(args []any, body any) []any {
@@ -89,7 +113,21 @@ func HeadersByRequest(
 	headersFor func(RequestInput) (map[string]string, error),
 	override bool,
 ) jpoet.Middleware {
-	return jpoet.HookMiddleware(func(next jpoet.Invoker, funcName string, args []any) (any, error) {
+	return jpoet.HookMiddleware(headersByRequestHook(headersFor, override))
+}
+
+func WithHeadersByRequest(
+	headersFor func(RequestInput) (map[string]string, error),
+	override bool,
+) Option {
+	return WithHook(headersByRequestHook(headersFor, override))
+}
+
+func headersByRequestHook(
+	headersFor func(RequestInput) (map[string]string, error),
+	override bool,
+) jpoet.InvokeHook {
+	return func(next jpoet.Invoker, funcName string, args []any) (any, error) {
 		if funcName != "request" || headersFor == nil {
 			return next.Invoke(funcName, args)
 		}
@@ -105,7 +143,7 @@ func HeadersByRequest(
 			return next.Invoke(funcName, args)
 		}
 		return next.Invoke(funcName, injectHeaders(args, headers, override))
-	})
+	}
 }
 
 func injectHeaders(args []any, headers map[string]string, override bool) []any {
