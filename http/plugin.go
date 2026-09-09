@@ -11,9 +11,10 @@ import (
 const defaultRequestTimeout = 30 * time.Second
 
 type Config struct {
-	BaseURL string
-	Client  *http.Client
-	Headers map[string]string
+	BaseURL    string
+	Client     *http.Client
+	Headers    map[string]string
+	pluginOpts []jpoet.PluginOption
 }
 
 type Option func(*Config)
@@ -46,6 +47,20 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
+func WithPluginOption(opt jpoet.PluginOption) Option {
+	return func(c *Config) {
+		c.pluginOpts = append(c.pluginOpts, opt)
+	}
+}
+
+func WithMiddleware(middleware ...jpoet.Middleware) Option {
+	return WithPluginOption(jpoet.WithMiddleware(middleware...))
+}
+
+func WithHook(hook jpoet.InvokeHook) Option {
+	return WithPluginOption(jpoet.WithHook(hook))
+}
+
 func Plugin(name string, opts ...Option) *jpoet.Plugin {
 	cfg := &Config{
 		Client: &http.Client{
@@ -58,5 +73,5 @@ func Plugin(name string, opts ...Option) *jpoet.Plugin {
 	}
 	return jpoet.NewPlugin(name, []jsonnet.NativeFunction{
 		Request(cfg),
-	})
+	}, cfg.pluginOpts...)
 }
