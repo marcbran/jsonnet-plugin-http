@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -43,6 +44,10 @@ func Request(cfg *Config) jsonnet.NativeFunction {
 	}
 }
 
+var actionFields = []string{"method", "path", "baseURL", "headers", "query", "context", "body"}
+
+var mutatingMethods = []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}
+
 func parseRequestInput(input []any) (RequestInput, error) {
 	if len(input) != 1 {
 		return RequestInput{}, fmt.Errorf("expected input object")
@@ -51,16 +56,46 @@ func parseRequestInput(input []any) (RequestInput, error) {
 	if !ok {
 		return RequestInput{}, fmt.Errorf("input must be an object")
 	}
-	method, ok := raw["method"].(string)
-	if !ok || method == "" {
-		return RequestInput{}, fmt.Errorf("method must be a non-empty string")
+	ri, err := parseRequestFields(raw)
+	if err != nil {
+		return RequestInput{}, err
 	}
-	if method != http.MethodGet && method != http.MethodPost {
+	if ri.Method != http.MethodGet && ri.Method != http.MethodPost {
 		return RequestInput{}, fmt.Errorf("method must be GET or POST")
 	}
 	readonly, _ := raw["readonly"].(bool)
-	if method == http.MethodPost && !readonly {
+	if ri.Method == http.MethodPost && !readonly {
 		return RequestInput{}, fmt.Errorf("POST requires readonly: true")
+	}
+	if ri.Body != nil && ri.Method != http.MethodPost {
+		return RequestInput{}, fmt.Errorf("body is only allowed with POST")
+	}
+	if ri.Method == http.MethodPost && ri.Body == nil {
+		return RequestInput{}, fmt.Errorf("POST requires a body")
+	}
+	return ri, nil
+}
+
+func parseActionInput(data map[string]any) (RequestInput, error) {
+	for key := range data {
+		if !slices.Contains(actionFields, key) {
+			return RequestInput{}, fmt.Errorf("unknown field %q", key)
+		}
+	}
+	ri, err := parseRequestFields(data)
+	if err != nil {
+		return RequestInput{}, err
+	}
+	if !slices.Contains(mutatingMethods, ri.Method) {
+		return RequestInput{}, fmt.Errorf("method must be POST, PUT, PATCH, or DELETE")
+	}
+	return ri, nil
+}
+
+func parseRequestFields(raw map[string]any) (RequestInput, error) {
+	method, ok := raw["method"].(string)
+	if !ok || method == "" {
+		return RequestInput{}, fmt.Errorf("method must be a non-empty string")
 	}
 	path, ok := raw["path"].(string)
 	if !ok || path == "" {
@@ -72,6 +107,7 @@ func parseRequestInput(input []any) (RequestInput, error) {
 		Headers: map[string]string{},
 		Query:   map[string]string{},
 		Context: map[string]string{},
+		Body:    raw["body"],
 	}
 	if raw["baseURL"] != nil {
 		s, ok := raw["baseURL"].(string)
@@ -80,64 +116,40 @@ func parseRequestInput(input []any) (RequestInput, error) {
 		}
 		ri.BaseURL = s
 	}
-	if raw["headers"] != nil {
-		hm, ok := raw["headers"].(map[string]any)
-		if !ok {
-			return RequestInput{}, fmt.Errorf("headers must be an object")
-		}
-		for k, v := range hm {
-			if v == nil {
-				continue
-			}
-			s, err := stringFromAny(v)
-			if err != nil {
-				return RequestInput{}, fmt.Errorf("header %q: %w", k, err)
-			}
-			ri.Headers[k] = s
-		}
+	err := parseStringMap(raw, "headers", "header", ri.Headers)
+	if err != nil {
+		return RequestInput{}, err
 	}
-	if raw["query"] != nil {
-		qm, ok := raw["query"].(map[string]any)
-		if !ok {
-			return RequestInput{}, fmt.Errorf("query must be an object")
-		}
-		for k, v := range qm {
-			if v == nil {
-				continue
-			}
-			s, err := stringFromAny(v)
-			if err != nil {
-				return RequestInput{}, fmt.Errorf("query %q: %w", k, err)
-			}
-			ri.Query[k] = s
-		}
+	err = parseStringMap(raw, "query", "query", ri.Query)
+	if err != nil {
+		return RequestInput{}, err
 	}
-	if raw["context"] != nil {
-		cm, ok := raw["context"].(map[string]any)
-		if !ok {
-			return RequestInput{}, fmt.Errorf("context must be an object")
-		}
-		for k, v := range cm {
-			if v == nil {
-				continue
-			}
-			s, err := stringFromAny(v)
-			if err != nil {
-				return RequestInput{}, fmt.Errorf("context %q: %w", k, err)
-			}
-			ri.Context[k] = s
-		}
-	}
-	if raw["body"] != nil {
-		if method != http.MethodPost {
-			return RequestInput{}, fmt.Errorf("body is only allowed with POST")
-		}
-		ri.Body = raw["body"]
-	}
-	if method == http.MethodPost && ri.Body == nil {
-		return RequestInput{}, fmt.Errorf("POST requires a body")
+	err = parseStringMap(raw, "context", "context", ri.Context)
+	if err != nil {
+		return RequestInput{}, err
 	}
 	return ri, nil
+}
+
+func parseStringMap(raw map[string]any, field string, label string, out map[string]string) error {
+	if raw[field] == nil {
+		return nil
+	}
+	m, ok := raw[field].(map[string]any)
+	if !ok {
+		return fmt.Errorf("%s must be an object", field)
+	}
+	for k, v := range m {
+		if v == nil {
+			continue
+		}
+		s, err := stringFromAny(v)
+		if err != nil {
+			return fmt.Errorf("%s %q: %w", label, k, err)
+		}
+		out[k] = s
+	}
+	return nil
 }
 
 func stringFromAny(v any) (string, error) {
@@ -153,7 +165,7 @@ func stringFromAny(v any) (string, error) {
 	}
 }
 
-func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (any, error) {
+func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]any, error) {
 	baseURL := ri.BaseURL
 	if baseURL == "" {
 		baseURL = cfg.BaseURL
