@@ -61,6 +61,14 @@ func WithHook(hook jpoet.InvokeHook) Option {
 	return WithPluginOption(jpoet.WithHook(hook))
 }
 
+func WithActionMiddleware(middleware ...jpoet.ActionMiddleware) Option {
+	return WithPluginOption(jpoet.WithActionMiddleware(middleware...))
+}
+
+func WithActionHook(hook jpoet.ActionHook) Option {
+	return WithPluginOption(jpoet.WithActionHook(hook))
+}
+
 func Plugin(name string, opts ...Option) *jpoet.Plugin {
 	cfg := &Config{
 		Client: &http.Client{
@@ -71,7 +79,10 @@ func Plugin(name string, opts ...Option) *jpoet.Plugin {
 	for _, o := range opts {
 		o(cfg)
 	}
+	allOpts := append([]jpoet.PluginOption{
+		jpoet.WithAction("request", RequestAction(cfg)),
+	}, cfg.pluginOpts...)
 	return jpoet.NewPlugin(name, []jsonnet.NativeFunction{
 		Request(cfg),
-	}, cfg.pluginOpts...)
+	}, allOpts...)
 }

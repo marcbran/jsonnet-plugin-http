@@ -35,12 +35,10 @@ func TestInjectBaseURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := []any{tt.jsonnetInput}
+			got := injectBaseURL(tt.jsonnetInput, tt.injectedBaseURL)
 
-			got := injectBaseURL(args, tt.injectedBaseURL)
-
-			require.Equal(t, tt.injectedBaseURL, got[0].(map[string]any)["baseURL"])
-			require.Equal(t, tt.wantOriginalBase, args[0].(map[string]any)["baseURL"])
+			require.Equal(t, tt.injectedBaseURL, got["baseURL"])
+			require.Equal(t, tt.wantOriginalBase, tt.jsonnetInput["baseURL"])
 		})
 	}
 }
@@ -84,12 +82,10 @@ func TestInjectBody(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := []any{tt.jsonnetInput}
+			got := injectBody(tt.jsonnetInput, tt.injectedBody)
 
-			got := injectBody(args, tt.injectedBody)
-
-			require.Equal(t, tt.injectedBody, got[0].(map[string]any)["body"])
-			require.Equal(t, tt.wantOriginalBody, args[0].(map[string]any)["body"])
+			require.Equal(t, tt.injectedBody, got["body"])
+			require.Equal(t, tt.wantOriginalBody, tt.jsonnetInput["body"])
 		})
 	}
 }
@@ -139,17 +135,16 @@ func TestInjectHeaders(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			args := []any{map[string]any{
+			input := map[string]any{
 				"method":  "GET",
 				"path":    "/x",
 				"headers": tt.jsonnetHeaders,
-			}}
+			}
 
-			got := injectHeaders(args, tt.injectedHeaders, tt.override)
+			got := injectHeaders(input, tt.injectedHeaders, tt.override)
 
-			headers := got[0].(map[string]any)["headers"]
-			require.Equal(t, tt.want, headers)
-			require.Equal(t, "Bearer jsonnet", args[0].(map[string]any)["headers"].(map[string]any)["Authorization"])
+			require.Equal(t, tt.want, got["headers"])
+			require.Equal(t, "Bearer jsonnet", input["headers"].(map[string]any)["Authorization"])
 		})
 	}
 }
