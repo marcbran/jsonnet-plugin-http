@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/google/go-jsonnet v0.22.0
-	github.com/marcbran/jpoet v0.27.0
+	github.com/marcbran/jpoet v0.28.0
 	github.com/stretchr/testify v1.12.1
 )
 
@@ -23,8 +23,8 @@ require (
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
-	google.golang.org/grpc v1.84.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260817212433-ac3dfec99bb1 // indirect
+	google.golang.org/grpc v1.85.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )

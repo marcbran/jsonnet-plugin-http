@@ -3,6 +3,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"io"
 	stdhttp "net/http"
@@ -50,6 +51,21 @@ func (s *Stage) a_server_returning_not_found(body string) *Stage {
 	}))
 	s.t.(*testing.T).Cleanup(s.srv.Close)
 	s.plugin = pluginhttp.Plugin("http", pluginhttp.WithBaseURL(s.srv.URL), pluginhttp.WithHTTPClient(s.srv.Client()))
+	return s
+}
+
+func (s *Stage) a_server_whose_request_headers_cannot_be_resolved() *Stage {
+	s.srv = httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		w.WriteHeader(stdhttp.StatusOK)
+	}))
+	s.t.(*testing.T).Cleanup(s.srv.Close)
+	s.plugin = pluginhttp.Plugin("http",
+		pluginhttp.WithBaseURL(s.srv.URL),
+		pluginhttp.WithHTTPClient(s.srv.Client()),
+		pluginhttp.WithHeadersByRequest(func(pluginhttp.RequestInput) (map[string]string, error) {
+			return nil, fmt.Errorf("token unavailable")
+		}, false),
+	)
 	return s
 }
 
@@ -147,6 +163,18 @@ func (s *Stage) a_jsonnet_request_with_query_and_headers_is_evaluated(method str
 	return s
 }
 
+func (s *Stage) a_request_action_is_executed(method string, path string) *Stage {
+	action, ok := s.plugin.Action("request")
+	require.True(s.t, ok, "plugin has no request action")
+	_, s.err = action(context.Background(), map[string]any{"method": method, "path": path})
+	return s
+}
+
+func (s *Stage) the_action_fails_with(expected string) *Stage {
+	require.EqualError(s.t, s.err, expected)
+	return s
+}
+
 func (s *Stage) the_eval_has_no_error() *Stage {
 	require.NoError(s.t, s.err)
 	return s
@@ -175,23 +203,29 @@ func (s *Stage) the_result_has_header(name string, expected string) *Stage {
 	return s
 }
 
-func (s *Stage) the_result_has_kind(expected string) *Stage {
-	require.Equal(s.t, expected, s.body()["kind"])
+func (s *Stage) failure() map[string]any {
+	failure, ok := s.out[jpoet.FailureField].(map[string]any)
+	require.True(s.t, ok, "result is not a failure: %v", s.out)
+	return failure
+}
+
+func (s *Stage) the_result_is_a_failure() *Stage {
+	s.failure()
 	return s
 }
 
 func (s *Stage) the_result_has_code(expected float64) *Stage {
-	require.Equal(s.t, expected, s.body()["code"])
+	require.Equal(s.t, expected, s.failure()["code"])
 	return s
 }
 
 func (s *Stage) the_result_has_message(expected string) *Stage {
-	require.Equal(s.t, expected, s.body()["message"])
+	require.Equal(s.t, expected, s.failure()["message"])
 	return s
 }
 
 func (s *Stage) the_result_message_contains(expected string) *Stage {
-	msg, ok := s.body()["message"].(string)
+	msg, ok := s.failure()["message"].(string)
 	require.True(s.t, ok)
 	require.True(s.t, strings.Contains(msg, expected))
 	return s

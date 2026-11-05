@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"net/http"
 
 	"github.com/marcbran/jpoet/pkg/jpoet"
 )
@@ -65,7 +66,7 @@ func WithBaseURLByRequest(
 	return withInputModifier(func(ri RequestInput, input map[string]any) (map[string]any, error) {
 		baseURL, err := baseURLFor(ri)
 		if err != nil {
-			return nil, fmt.Errorf("base url by request: %w", err)
+			return nil, jpoet.NewFailure(http.StatusInternalServerError, fmt.Sprintf("base url by request: %s", err))
 		}
 		if baseURL == "" {
 			return input, nil
@@ -89,7 +90,7 @@ func WithBodyByRequest(
 	return withInputModifier(func(ri RequestInput, input map[string]any) (map[string]any, error) {
 		body, err := bodyFor(ri)
 		if err != nil {
-			return nil, fmt.Errorf("body by request: %w", err)
+			return nil, jpoet.NewFailure(http.StatusInternalServerError, fmt.Sprintf("body by request: %s", err))
 		}
 		if body == nil {
 			return input, nil
@@ -114,7 +115,7 @@ func WithHeadersByRequest(
 	return withInputModifier(func(ri RequestInput, input map[string]any) (map[string]any, error) {
 		headers, err := headersFor(ri)
 		if err != nil {
-			return nil, fmt.Errorf("headers by request: %w", err)
+			return nil, jpoet.NewFailure(http.StatusUnauthorized, fmt.Sprintf("headers by request: %s", err))
 		}
 		if len(headers) == 0 {
 			return input, nil
