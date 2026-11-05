@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/marcbran/jpoet/pkg/jpoet"
@@ -15,12 +16,12 @@ func RequestAction(cfg *Config) jpoet.ActionFunc {
 			return "", err
 		}
 		out, err := runRequest(ctx, cfg, ri)
+		var failure *jpoet.Failure
+		if errors.As(err, &failure) {
+			return "", fmt.Errorf("%s %s: %d %s", ri.Method, ri.Path, failure.Code, failure.Message)
+		}
 		if err != nil {
 			return "", err
-		}
-		status, _ := out["status"].(float64)
-		if status < 200 || status > 299 {
-			return "", fmt.Errorf("%s %s: %d %s", ri.Method, ri.Path, int(status), failureMessage(out))
 		}
 		raw, err := json.Marshal(out)
 		if err != nil {
@@ -28,10 +29,4 @@ func RequestAction(cfg *Config) jpoet.ActionFunc {
 		}
 		return string(raw), nil
 	}
-}
-
-func failureMessage(out map[string]any) string {
-	body, _ := out["body"].(map[string]any)
-	message, _ := body["message"].(string)
-	return message
 }

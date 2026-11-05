@@ -29,10 +29,38 @@ func TestRequestHTTPError(t *testing.T) {
 
 	then.
 		the_eval_has_no_error().and().
-		the_result_has_status(404).and().
-		the_result_has_kind("Status").and().
+		the_result_is_a_failure().and().
 		the_result_has_code(404).and().
 		the_result_has_message("gone")
+}
+
+func TestRequestActionReportsHTTPError(t *testing.T) {
+	given, when, then := scenario(t)
+
+	given.
+		a_server_returning_not_found("gone")
+
+	when.
+		a_request_action_is_executed("POST", "/missing")
+
+	then.
+		the_action_fails_with("POST /missing: 404 gone")
+}
+
+func TestRequestHeadersThatCannotBeResolvedAreAFailure(t *testing.T) {
+	given, when, then := scenario(t)
+
+	given.
+		a_server_whose_request_headers_cannot_be_resolved()
+
+	when.
+		a_jsonnet_request_is_evaluated("GET", "/anything")
+
+	then.
+		the_eval_has_no_error().and().
+		the_result_is_a_failure().and().
+		the_result_has_code(401).and().
+		the_result_has_message("headers by request: token unavailable")
 }
 
 func TestRequestTimeout(t *testing.T) {
@@ -46,7 +74,7 @@ func TestRequestTimeout(t *testing.T) {
 
 	then.
 		the_eval_has_no_error().and().
-		the_result_has_kind("Status").and().
+		the_result_is_a_failure().and().
 		the_result_has_code(500).and().
 		the_result_message_contains("context deadline exceeded")
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/go-jsonnet"
 	"github.com/google/go-jsonnet/ast"
+	"github.com/marcbran/jpoet/pkg/jpoet"
 )
 
 type RequestInput struct {
@@ -33,7 +34,7 @@ func Request(cfg *Config) jsonnet.NativeFunction {
 		Func: func(input []any) (any, error) {
 			ri, err := parseRequestInput(input)
 			if err != nil {
-				return clientFailureStatus(400, err.Error()), nil
+				return nil, jpoet.NewFailure(http.StatusBadRequest, err.Error())
 			}
 			out, err := runRequest(context.Background(), cfg, ri)
 			if err != nil {
@@ -171,7 +172,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 		baseURL = cfg.BaseURL
 	}
 	if baseURL == "" {
-		return clientFailureEnvelope(400, "base url not configured"), nil
+		return nil, jpoet.NewFailure(http.StatusBadRequest, "base url not configured")
 	}
 	baseStr := strings.TrimRight(baseURL, "/")
 	pathStr := ri.Path
@@ -181,7 +182,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 	fullRaw := baseStr + pathStr
 	u, err := url.Parse(fullRaw)
 	if err != nil {
-		return clientFailureEnvelope(400, "invalid url"), nil
+		return nil, jpoet.NewFailure(http.StatusBadRequest, "invalid url")
 	}
 	q := u.Query()
 	for k, v := range ri.Query {
@@ -192,7 +193,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 	if ri.Body != nil {
 		bodyBytes, err := json.Marshal(ri.Body)
 		if err != nil {
-			return clientFailureEnvelope(400, err.Error()), nil
+			return nil, jpoet.NewFailure(http.StatusBadRequest, err.Error())
 		}
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
@@ -202,7 +203,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 	}
 	req, err := http.NewRequestWithContext(ctx, ri.Method, u.String(), reqBody)
 	if err != nil {
-		return clientFailureEnvelope(400, err.Error()), nil
+		return nil, jpoet.NewFailure(http.StatusBadRequest, err.Error())
 	}
 	if ri.Body != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -215,15 +216,15 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 	}
 	resp, err := cfg.Client.Do(req)
 	if err != nil {
-		return clientFailureEnvelope(500, err.Error()), nil
+		return nil, jpoet.NewFailure(http.StatusInternalServerError, err.Error())
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return clientFailureEnvelope(500, err.Error()), nil
+		return nil, jpoet.NewFailure(http.StatusInternalServerError, err.Error())
 	}
 	err = resp.Body.Close()
 	if err != nil {
-		return clientFailureEnvelope(500, err.Error()), nil
+		return nil, jpoet.NewFailure(http.StatusInternalServerError, err.Error())
 	}
 	headers := headersToMap(resp.Header)
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
@@ -231,7 +232,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 		if msg == "" {
 			msg = resp.Status
 		}
-		return envelope(resp.StatusCode, headers, clientFailureStatus(int32(resp.StatusCode), msg)), nil
+		return nil, jpoet.NewFailure(resp.StatusCode, msg)
 	}
 	if len(body) == 0 {
 		return envelope(resp.StatusCode, headers, map[string]any{}), nil
@@ -239,7 +240,7 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 	var out any
 	err = json.Unmarshal(body, &out)
 	if err != nil {
-		return envelope(resp.StatusCode, headers, clientFailureStatus(500, err.Error())), nil
+		return nil, jpoet.NewFailure(http.StatusInternalServerError, err.Error())
 	}
 	return envelope(resp.StatusCode, headers, out), nil
 }
@@ -259,21 +260,5 @@ func envelope(status int, headers map[string]any, body any) map[string]any {
 		"status":  float64(status),
 		"headers": headers,
 		"body":    body,
-	}
-}
-
-func clientFailureEnvelope(code int32, msg string) map[string]any {
-	return envelope(int(code), map[string]any{}, clientFailureStatus(code, msg))
-}
-
-func clientFailureStatus(code int32, msg string) map[string]any {
-	reason := http.StatusText(int(code))
-	return map[string]any{
-		"apiVersion": "v1",
-		"kind":       "Status",
-		"status":     "Failure",
-		"code":       float64(code),
-		"message":    msg,
-		"reason":     reason,
 	}
 }
