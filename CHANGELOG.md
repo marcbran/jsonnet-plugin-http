@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.5.0...v0.6.0) (2026-11-05)
+
+
+### Features
+
+* request action ([#49](https://github.com/marcbran/jsonnet-plugin-http/issues/49)) ([86fe7b7](https://github.com/marcbran/jsonnet-plugin-http/commit/86fe7b776aedc1d94e1f6693643e15871d24eafa))
+* return call failures as jpoet failures and keep call results in response ([#54](https://github.com/marcbran/jsonnet-plugin-http/issues/54)) ([2e902bc](https://github.com/marcbran/jsonnet-plugin-http/commit/2e902bcbcd6f2001ff2a3b8afb7ae3a5d661ea2e))
+
 ## [0.5.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.4.0...v0.5.0) (2026-09-09)
 
 
