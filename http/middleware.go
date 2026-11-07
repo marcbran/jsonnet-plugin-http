@@ -21,13 +21,13 @@ func withInputModifier(modify inputModifier) Option {
 }
 
 func modifierInvokeHook(modify inputModifier) jpoet.InvokeHook {
-	return func(next jpoet.Invoker, funcName string, args []any) (any, error) {
+	return func(ctx context.Context, next jpoet.Invoker, funcName string, args []any) (any, error) {
 		if funcName != "request" {
-			return next.Invoke(funcName, args)
+			return next.Invoke(ctx, funcName, args)
 		}
 		ri, err := parseRequestInput(args)
 		if err != nil {
-			return next.Invoke(funcName, args)
+			return next.Invoke(ctx, funcName, args)
 		}
 		input, err := modify(ri, args[0].(map[string]any))
 		if err != nil {
@@ -36,7 +36,7 @@ func modifierInvokeHook(modify inputModifier) jpoet.InvokeHook {
 		mergedArgs := make([]any, len(args))
 		copy(mergedArgs, args)
 		mergedArgs[0] = input
-		return next.Invoke(funcName, mergedArgs)
+		return next.Invoke(ctx, funcName, mergedArgs)
 	}
 }
 
