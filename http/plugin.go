@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/go-jsonnet"
 	"github.com/marcbran/jpoet/pkg/jpoet"
 )
 
@@ -80,9 +79,8 @@ func Plugin(name string, opts ...Option) *jpoet.Plugin {
 		o(cfg)
 	}
 	allOpts := append([]jpoet.PluginOption{
+		jpoet.WithFunctions(Request(cfg)),
 		jpoet.WithAction("request", RequestAction(cfg)),
 	}, cfg.pluginOpts...)
-	return jpoet.NewPlugin(name, []jsonnet.NativeFunction{
-		Request(cfg),
-	}, allOpts...)
+	return jpoet.NewPlugin(name, nil, allOpts...)
 }

@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-jsonnet"
-	"github.com/google/go-jsonnet/ast"
 	"github.com/marcbran/jpoet/pkg/jpoet"
 )
 
@@ -27,16 +25,15 @@ type RequestInput struct {
 	Body    any
 }
 
-func Request(cfg *Config) jsonnet.NativeFunction {
-	return jsonnet.NativeFunction{
-		Name:   "request",
-		Params: ast.Identifiers{"input"},
-		Func: func(input []any) (any, error) {
+func Request(cfg *Config) jpoet.Function {
+	return jpoet.Function{
+		Name: "request",
+		Func: func(ctx context.Context, input []any) (any, error) {
 			ri, err := parseRequestInput(input)
 			if err != nil {
 				return nil, jpoet.NewFailure(http.StatusBadRequest, err.Error())
 			}
-			out, err := runRequest(context.Background(), cfg, ri)
+			out, err := runRequest(ctx, cfg, ri)
 			if err != nil {
 				return nil, err
 			}
