@@ -152,7 +152,7 @@ require (
 	github.com/manuelarte/funcorder v0.6.0 // indirect
 	github.com/maratori/testableexamples v1.0.1 // indirect
 	github.com/maratori/testpackage v1.1.2 // indirect
-	github.com/marcbran/jpoet v0.27.0 // indirect
+	github.com/marcbran/jpoet v0.30.0 // indirect
 	github.com/marcbran/jsonnet-plugin-jsonnet v0.4.0 // indirect
 	github.com/marcbran/jsonnet-plugin-markdown v0.3.0 // indirect
 	github.com/matoous/godox v1.1.0 // indirect
@@ -247,7 +247,7 @@ require (
 	golang.org/x/tools v0.52.0 // indirect
 	golang.org/x/vuln v1.9.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
-	google.golang.org/grpc v1.84.0 // indirect
+	google.golang.org/grpc v1.85.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
