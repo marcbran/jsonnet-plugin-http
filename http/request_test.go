@@ -1,6 +1,7 @@
 package http
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestParseRequestInput(t *testing.T) {
 				Method:  "GET",
 				Path:    "/api/v1/query",
 				Headers: map[string]string{},
-				Query:   map[string]string{},
+				Query:   url.Values{},
 				Context: map[string]string{},
 			},
 		},
@@ -42,7 +43,7 @@ func TestParseRequestInput(t *testing.T) {
 				Method:  "GET",
 				Path:    "/x",
 				Headers: map[string]string{},
-				Query:   map[string]string{},
+				Query:   url.Values{},
 				Context: map[string]string{
 					"region": "eu-west-1",
 					"tenant": "acme",
@@ -61,7 +62,7 @@ func TestParseRequestInput(t *testing.T) {
 				Method:  "GET",
 				Path:    "/y",
 				Headers: map[string]string{},
-				Query:   map[string]string{},
+				Query:   url.Values{},
 				Context: map[string]string{"b": "c"},
 			},
 		},
@@ -121,10 +122,25 @@ func TestParseRequestInput(t *testing.T) {
 					"X-Foo": "bar",
 					"X-B":   "true",
 				},
-				Query: map[string]string{
-					"q": "up",
-					"n": "1",
+				Query: url.Values{
+					"q": {"up"},
+					"n": {"1"},
 				},
+				Context: map[string]string{},
+			},
+		},
+		{
+			name: "array query value",
+			input: []any{map[string]any{
+				"method": "GET",
+				"path":   "/z",
+				"query":  map[string]any{"ids[]": []any{"a", float64(2)}},
+			}},
+			want: RequestInput{
+				Method:  "GET",
+				Path:    "/z",
+				Headers: map[string]string{},
+				Query:   url.Values{"ids[]": {"a", "2"}},
 				Context: map[string]string{},
 			},
 		},
@@ -139,7 +155,7 @@ func TestParseRequestInput(t *testing.T) {
 				Method:  "GET",
 				Path:    "/y",
 				Headers: map[string]string{},
-				Query:   map[string]string{"b": "c"},
+				Query:   url.Values{"b": {"c"}},
 				Context: map[string]string{},
 			},
 		},
@@ -159,7 +175,7 @@ func TestParseRequestInput(t *testing.T) {
 				Headers: map[string]string{
 					"X-Set": "v",
 				},
-				Query:   map[string]string{},
+				Query:   url.Values{},
 				Context: map[string]string{},
 			},
 		},
@@ -192,7 +208,7 @@ func TestParseRequestInput(t *testing.T) {
 				Method:  "POST",
 				Path:    "/api/ds/query",
 				Headers: map[string]string{},
-				Query:   map[string]string{},
+				Query:   url.Values{},
 				Context: map[string]string{},
 				Body:    map[string]any{"queries": []any{}},
 			},
