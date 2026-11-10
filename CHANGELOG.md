@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.7.0...v0.8.0) (2026-11-10)
+
+
+### Features
+
+* accept array query values as repeated keys ([#62](https://github.com/marcbran/jsonnet-plugin-http/issues/62)) ([5f50398](https://github.com/marcbran/jsonnet-plugin-http/commit/5f50398d0a16a35ddd40759daa0ffafb33105870))
+
 ## [0.7.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.6.0...v0.7.0) (2026-11-07)
 
 
