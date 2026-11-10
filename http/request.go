@@ -20,7 +20,7 @@ type RequestInput struct {
 	Method  string
 	Path    string
 	Headers map[string]string
-	Query   map[string]string
+	Query   url.Values
 	Context map[string]string
 	Body    any
 }
@@ -103,7 +103,7 @@ func parseRequestFields(raw map[string]any) (RequestInput, error) {
 		Method:  method,
 		Path:    path,
 		Headers: map[string]string{},
-		Query:   map[string]string{},
+		Query:   url.Values{},
 		Context: map[string]string{},
 		Body:    raw["body"],
 	}
@@ -118,7 +118,7 @@ func parseRequestFields(raw map[string]any) (RequestInput, error) {
 	if err != nil {
 		return RequestInput{}, err
 	}
-	err = parseStringMap(raw, "query", "query", ri.Query)
+	err = parseQueryMap(raw, ri.Query)
 	if err != nil {
 		return RequestInput{}, err
 	}
@@ -146,6 +146,33 @@ func parseStringMap(raw map[string]any, field string, label string, out map[stri
 			return fmt.Errorf("%s %q: %w", label, k, err)
 		}
 		out[k] = s
+	}
+	return nil
+}
+
+func parseQueryMap(raw map[string]any, out url.Values) error {
+	if raw["query"] == nil {
+		return nil
+	}
+	m, ok := raw["query"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("query must be an object")
+	}
+	for k, v := range m {
+		if v == nil {
+			continue
+		}
+		values, isArray := v.([]any)
+		if !isArray {
+			values = []any{v}
+		}
+		for _, item := range values {
+			s, err := stringFromAny(item)
+			if err != nil {
+				return fmt.Errorf("query %q: %w", k, err)
+			}
+			out.Add(k, s)
+		}
 	}
 	return nil
 }
@@ -182,8 +209,8 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 		return nil, jpoet.NewFailure(http.StatusBadRequest, "invalid url")
 	}
 	q := u.Query()
-	for k, v := range ri.Query {
-		q.Set(k, v)
+	for k, values := range ri.Query {
+		q[k] = values
 	}
 	u.RawQuery = q.Encode()
 	var bodyReader *bytes.Reader
