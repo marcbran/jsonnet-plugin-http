@@ -18,6 +18,47 @@ func TestRequestEmptyBody(t *testing.T) {
 		the_body_is_an_empty_map()
 }
 
+func TestRequestTextBody(t *testing.T) {
+	given, when, then := scenario(t)
+
+	given.
+		a_server_returning_body("text/plain; charset=utf-8", "hello world")
+
+	when.
+		a_jsonnet_request_is_evaluated("GET", "/text")
+
+	then.the_eval_has_no_error().and().
+		the_result_has_status(200).and().
+		the_body_is_a_string("hello world")
+}
+
+func TestRequestHTMLBody(t *testing.T) {
+	given, when, then := scenario(t)
+
+	given.
+		a_server_returning_body("text/html", "<p>hi</p>")
+
+	when.
+		a_jsonnet_request_is_evaluated("GET", "/html")
+
+	then.the_eval_has_no_error().and().
+		the_result_has_status(200).and().
+		the_body_is_a_string("<p>hi</p>")
+}
+
+func TestRequestJSONSuffixBody(t *testing.T) {
+	given, when, then := scenario(t)
+
+	given.
+		a_server_returning_body("application/problem+json", `{"key":"value"}`)
+
+	when.
+		a_jsonnet_request_is_evaluated("GET", "/problem")
+
+	then.the_eval_has_no_error().and().
+		the_result_has_field("key", "value")
+}
+
 func TestRequestHTTPError(t *testing.T) {
 	given, when, then := scenario(t)
 

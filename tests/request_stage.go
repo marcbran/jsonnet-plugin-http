@@ -43,6 +43,17 @@ func (s *Stage) a_server_returning_empty_body() *Stage {
 	return s
 }
 
+func (s *Stage) a_server_returning_body(contentType string, body string) *Stage {
+	s.srv = httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		w.Header().Set("Content-Type", contentType)
+		_, err := w.Write([]byte(body))
+		require.NoError(s.t, err)
+	}))
+	s.t.(*testing.T).Cleanup(s.srv.Close)
+	s.plugin = pluginhttp.Plugin("http", pluginhttp.WithBaseURL(s.srv.URL), pluginhttp.WithHTTPClient(s.srv.Client()))
+	return s
+}
+
 func (s *Stage) a_server_returning_not_found(body string) *Stage {
 	s.srv = httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		w.WriteHeader(stdhttp.StatusNotFound)
@@ -188,6 +199,11 @@ func (s *Stage) body() map[string]any {
 
 func (s *Stage) the_body_is_an_empty_map() *Stage {
 	require.Len(s.t, s.body(), 0)
+	return s
+}
+
+func (s *Stage) the_body_is_a_string(expected string) *Stage {
+	require.Equal(s.t, expected, s.out["body"])
 	return s
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"slices"
@@ -261,12 +262,23 @@ func runRequest(ctx context.Context, cfg *Config, ri RequestInput) (map[string]a
 	if len(body) == 0 {
 		return envelope(resp.StatusCode, headers, map[string]any{}), nil
 	}
+	if !isJSONContentType(resp.Header.Get("Content-Type")) {
+		return envelope(resp.StatusCode, headers, string(body)), nil
+	}
 	var out any
 	err = json.Unmarshal(body, &out)
 	if err != nil {
 		return nil, jpoet.NewFailure(http.StatusInternalServerError, err.Error())
 	}
 	return envelope(resp.StatusCode, headers, out), nil
+}
+
+func isJSONContentType(contentType string) bool {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return mediaType == "application/json" || strings.HasSuffix(mediaType, "+json")
 }
 
 func headersToMap(h http.Header) map[string]any {
