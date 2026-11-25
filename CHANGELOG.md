@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.8.0...v0.8.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* return non-json response bodies as strings ([#64](https://github.com/marcbran/jsonnet-plugin-http/issues/64)) ([78570dc](https://github.com/marcbran/jsonnet-plugin-http/commit/78570dcc2246f8e60c83a8447524a290a7122c8e))
+
 ## [0.8.0](https://github.com/marcbran/jsonnet-plugin-http/compare/v0.7.0...v0.8.0) (2026-11-10)
 
 
